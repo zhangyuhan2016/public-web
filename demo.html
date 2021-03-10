@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="browsermode" content="application">
+    <meta name="x5-orientation" content="portrait">
+    <meta name="screen-orientation" content="portrait">
+    <meta name="x5-page-mode" content="app">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="format-detection" content="telephone=no">
+    <title>Remote compilation - online operation</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-ui@2.11.1/lib/theme-chalk/index.css">
+    <style>
+        body {
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        #lineIframe {
+            margin-top: 20px;
+            height: 80vh;
+            width: 100%;
+            overflow: scroll;
+            border: 1px solid #666666;
+            white-space: pre;
+            font-size: 18px;
+            padding: 18px;
+            box-sizing: border-box;
+        }
+        .success {
+            color: #4caf50;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <template>
+        <i :class="onlineStatus ? 'el-icon-success success' : 'el-icon-loading'"></i>
+        <el-button @click="ajaxSubmit" type="primary" :loading="ajaxLoading">code-pull-build</el-button>
+        <el-button @click="stopAuto" :type="!autoHeight ? 'warning' : 'danger'" plain>{{autoHeight ? 'stop' : 'open'}}-log</el-button>
+        <pre id="lineIframe" ref="myIframe"></pre>
+    </template>
+</div>
+</body>
+<!-- import Vue before Element -->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@0.21.1/dist/axios.min.js"></script>
+<!-- import JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/element-ui@2.11.1/lib/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.18.1/min/moment.min.js"></script>
+<script>
+  new Vue({
+    el: '#app',
+    data() {
+      return {
+        ajaxLoading: false,
+        autoHeight: false,
+        onlineStatus: false
+      }
+    },
+    mounted () {
+      this.ajaxStatus()
+      this.ajaxLog()
+      this.stopAuto()
+    },
+    methods: {
+      stopAuto () {
+        this.autoHeight = !this.autoHeight
+        if (window.runT) {
+          clearInterval(window.runT)
+        }
+        if (this.autoHeight) {
+          window.runT = setInterval(this.ajaxLog, 2000)
+        }
+      },
+      getNowLog () {
+        return '/logs/' + `webhook.${moment().format('YYYY-MM-DD')}.log?t=` + new Date().getTime()
+      },
+      ajaxLog () {
+        axios.get(this.getNowLog()).then(res => {
+          this.$refs.myIframe.innerText = res.data
+          this.$nextTick(() => {
+            this.$refs.myIframe.scrollTop = this.$refs.myIframe.scrollHeight
+            this.$refs.myIframe.scrollLeft = 0
+          })
+        })
+      },
+      ajaxStatus () {
+        axios.get('/online-status/').then(res => {
+          if (res.data === 'OK') {
+            this.onlineStatus = true
+          } else {
+            this.onlineStatus = false
+          }
+        })
+      },
+      ajaxSubmit () {
+        axios.get('/code-update-build').then(res => {
+          this.ajaxLoading = true
+        })
+      }
+    }
+  })
+</script>
+</html>
